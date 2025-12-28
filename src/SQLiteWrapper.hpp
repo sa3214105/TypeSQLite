@@ -6,6 +6,7 @@
 #include <tuple>
 #include <type_traits>
 #include <optional>
+#include <iostream>
 
 namespace TypeSQLite {
     template<typename T>

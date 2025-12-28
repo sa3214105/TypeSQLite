@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 
 template<size_t N = 0>
 struct FixedString {
