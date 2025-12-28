@@ -9,6 +9,7 @@
 #include <regex>
 #include <iostream>
 #include <memory>
+#include <algorithm>
 
 struct HeaderNode {
     std::filesystem::path path;
