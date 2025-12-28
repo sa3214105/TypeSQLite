@@ -1,5 +1,4 @@
 #pragma once
-#include "../SQLiteStruct/Column/ColumnConstraints.hpp"
 
 template<typename... Ts>
     struct TypeGroup;

@@ -1,4 +1,5 @@
 #pragma once
+#include "../../TemplateHelper/FixedString.hpp"
 namespace TypeSQLite {
     enum class ConflictCause {
         ROLLBACK,

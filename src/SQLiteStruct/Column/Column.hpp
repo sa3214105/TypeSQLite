@@ -1,5 +1,5 @@
 #pragma once
-#include "../Column/ColumnConstraints.hpp"
+#include "./ColumnConstraints.hpp"
 #include "../../TemplateHelper/FixedString.hpp"
 #include "../DataType.hpp"
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "TableConstraint.hpp"
+#include "./TableConstraint.hpp"
 
 namespace TypeSQLite {
     template<ColumnOrTableColumnConcept T, ColumnOrTableColumnConcept... Ts>

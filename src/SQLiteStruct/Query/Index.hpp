@@ -1,5 +1,4 @@
 #pragma once
-#include "Table.hpp"
 #include "../../SQLiteWrapper.hpp"
 
 namespace TypeSQLite {

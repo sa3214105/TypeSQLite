@@ -78,3 +78,5 @@ if(ENABLE_TESTS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
         )
     endif()
 endif()
+
+add_executable(dependentHelper tools/dependentHelper/main.cpp)

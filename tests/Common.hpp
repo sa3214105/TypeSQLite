@@ -1,6 +1,7 @@
 #pragma once
 #include <gtest/gtest.h>
 #include "../src/TypeSQlite.hpp"
+//#include "single_header.hpp"
 
 using namespace TypeSQLite;
 inline Column<"name", DataType::TEXT> NameColumn;

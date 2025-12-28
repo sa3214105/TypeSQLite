@@ -1,7 +1,7 @@
 #pragma once
 #include <list>
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include <memory>
 #include <tuple>
 #include <type_traits>
