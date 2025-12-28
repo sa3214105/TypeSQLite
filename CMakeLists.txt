@@ -25,8 +25,8 @@ option(ENABLE_TESTS "Enable building tests" ON)
 if(ENABLE_TESTS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     #find_package(SQLite3 REQUIRED)
 
-    add_library(sqlite3_static STATIC external/sqlite/sqlite3.c)
-    target_include_directories(sqlite3_static PUBLIC `extern/sqlite`)
+    add_library(sqlite3_static STATIC external/SQLite/sqlite3.c)
+    target_include_directories(sqlite3_static PUBLIC external/SQLite)
     target_compile_definitions(sqlite3_static PUBLIC
             SQLITE_OMIT_LOAD_EXTENSION=1
             SQLITE_THREADSAFE=2
