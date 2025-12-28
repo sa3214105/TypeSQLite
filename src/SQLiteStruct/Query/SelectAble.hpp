@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <optional>
 
 #include "../../SQLiteWrapper.hpp"
 #include "../Query/DataSource.hpp"

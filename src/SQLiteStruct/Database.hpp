@@ -1,7 +1,7 @@
 #pragma once
+#include <functional>
 #include "Query/Table.hpp"
 #include "Query/Index.hpp"
-#include "../TemplateHelper/FixedString.hpp"
 #include "../SQLiteWrapper.hpp"
 
 namespace TypeSQLite {
