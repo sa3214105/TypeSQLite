@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'  # Matches version tags like v1.0.0, v2.1.3
 
+permissions:
+  contents: write  # 必須：允許創建 Release 和上傳文件 (Required: Allow creating releases and uploading files)
+
 jobs:
   build-single-header:
     runs-on: ubuntu-latest
@@ -102,14 +105,10 @@ jobs:
         echo "📝 SHA256 checksum:"
         cat TypeSQLite.hpp.sha256
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
         body: |
           ## TypeSQLite Release ${{ github.ref_name }}
           
@@ -139,7 +138,6 @@ jobs:
           - 🔧 No external dependencies except SQLite3 (除了 SQLite3 外無其他外部依賴)
           
           ### 📊 檔案資訊 (File Information)
-          - **Size**: See attached file (詳見附件檔案)
           - **SHA256**: See `TypeSQLite.hpp.sha256`
           
           ### 🔧 編譯需求 (Build Requirements)
@@ -149,38 +147,13 @@ jobs:
           ### 📝 變更日誌 (Changelog)
           
           See commit history for details. (詳見提交歷史)
+        files: |
+          release/TypeSQLite.hpp
+          release/TypeSQLite.hpp.sha256
+          release/README.md
         draft: false
         prerelease: false
-
-    - name: Upload Single Header to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release/TypeSQLite.hpp
-        asset_name: TypeSQLite.hpp
-        asset_content_type: text/plain
-
-    - name: Upload Checksum to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release/TypeSQLite.hpp.sha256
-        asset_name: TypeSQLite.hpp.sha256
-        asset_content_type: text/plain
-
-    - name: Upload README to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release/README.md
-        asset_name: README.md
-        asset_content_type: text/markdown
+        generate_release_notes: true
 
     - name: Summary
       run: |
