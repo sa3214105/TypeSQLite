@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <concepts>
 #include <string>
+#include <vector>
 #include "../Column/Column.hpp"
 #include "../DataType.hpp"
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "Expressions.hpp"
+#include <vector>
 
 namespace TypeSQLite {
     // ============ SQLite Core Scalar Functions (Alphabetical Order) ============
