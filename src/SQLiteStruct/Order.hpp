@@ -16,7 +16,7 @@ namespace TypeSQLite {
         }
     }
 
-    std::string OrderTypeToString(OrderType order) {
+    inline std::string OrderTypeToString(OrderType order) {
         switch (order) {
             case OrderType::ASC:
                 return " ASC";
