@@ -213,7 +213,13 @@
 - [ ] Query result streaming
 - [ ] Memory-mapped I/O
 
-### 31. Scalar Functions (標量函數) ✅ **COMPLETED**
+### 31 Other KeyWords (其他關鍵字)
+- [ ] CURRENT
+- [ ] CURRENT_DATE
+- [ ] CURRENT_TIME
+- [ ] CURRENT_TIMESTAMP
+
+### 32. Scalar Functions (標量函數) ✅ **COMPLETED**
 - [x] All 60+ SQLite core scalar functions ✅
 - [x] changes() ✅
 - [x] total_changes() ✅
