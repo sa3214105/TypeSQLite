@@ -263,3 +263,100 @@ TEST_F(ColumnConstraintsTest, ConstraintDefaultReal) {
     EXPECT_EQ(results.size(), 1);
     EXPECT_DOUBLE_EQ(std::get<1>(results[0]), 5.0);
 }
+
+// 測試 DEFAULT 約束（CURRENT_TIMESTAMP）
+TEST_F(ColumnConstraintsTest, ConstraintDefaultCurrentTimestamp) {
+    using CreatedAtColumn = Column<"created_at", DataType::TEXT, Default<CurrentTimestamp{}> >;
+    auto testTableDef = MakeTableDefinition<"test_default_timestamp">(std::make_tuple(NameColumn, CreatedAtColumn{}));
+    Database<decltype(testTableDef)> db("test_database.db", testTableDef);
+    auto &testTable = db.GetTable<decltype(testTableDef)>();
+
+    // 只插入 name，created_at 應該使用 CURRENT_TIMESTAMP
+    testTable.Insert<decltype(NameColumn)>("Alice");
+
+    auto results = testTable.Select(testTable[NameColumn], testTable[CreatedAtColumn{}]).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 1);
+    EXPECT_EQ(std::get<0>(results[0]), "Alice");
+    // 驗證時間戳不為空且格式正確（包含日期和時間）
+    auto timestamp = std::get<1>(results[0]);
+    EXPECT_FALSE(timestamp.empty());
+    EXPECT_TRUE(timestamp.find('-') != std::string::npos); // 應該包含日期分隔符
+    EXPECT_TRUE(timestamp.find(':') != std::string::npos); // 應該包含時間分隔符
+}
+
+// 測試 DEFAULT 約束（CURRENT_DATE）
+TEST_F(ColumnConstraintsTest, ConstraintDefaultCurrentDate) {
+    using DateColumn = Column<"date", DataType::TEXT, Default<CurrentDate{}> >;
+    auto testTableDef = MakeTableDefinition<"test_default_date">(std::make_tuple(NameColumn, DateColumn{}));
+    Database<decltype(testTableDef)> db("test_database.db", testTableDef);
+    auto &testTable = db.GetTable<decltype(testTableDef)>();
+
+    testTable.Insert<decltype(NameColumn)>("Bob");
+
+    auto results = testTable.Select(testTable[NameColumn], testTable[DateColumn{}]).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 1);
+    EXPECT_EQ(std::get<0>(results[0]), "Bob");
+    // 驗證日期不為空且格式正確（YYYY-MM-DD）
+    auto date = std::get<1>(results[0]);
+    EXPECT_FALSE(date.empty());
+    EXPECT_TRUE(date.find('-') != std::string::npos); // 應該包含日期分隔符
+    EXPECT_EQ(date.length(), 10); // YYYY-MM-DD 格式長度為 10
+}
+
+// 測試 DEFAULT 約束（CURRENT_TIME）
+TEST_F(ColumnConstraintsTest, ConstraintDefaultCurrentTime) {
+    using TimeColumn = Column<"time", DataType::TEXT, Default<CurrentTime{}> >;
+    auto testTableDef = MakeTableDefinition<"test_default_time">(std::make_tuple(NameColumn, TimeColumn{}));
+    Database<decltype(testTableDef)> db("test_database.db", testTableDef);
+    auto &testTable = db.GetTable<decltype(testTableDef)>();
+
+    testTable.Insert<decltype(NameColumn)>("Charlie");
+
+    auto results = testTable.Select(testTable[NameColumn], testTable[TimeColumn{}]).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 1);
+    EXPECT_EQ(std::get<0>(results[0]), "Charlie");
+    // 驗證時間不為空且格式正確（HH:MM:SS）
+    auto time = std::get<1>(results[0]);
+    EXPECT_FALSE(time.empty());
+    EXPECT_TRUE(time.find(':') != std::string::npos); // 應該包含時間分隔符
+    EXPECT_EQ(time.length(), 8); // HH:MM:SS 格式長度為 8
+}
+
+// 測試組合 TimeKeyWord 和其他約束
+TEST_F(ColumnConstraintsTest, ConstraintDefaultTimeKeyWordWithNotNull) {
+    using IdColumn = Column<"id", DataType::INTEGER, ColumnPrimaryKey<> >;
+    using CreatedAtColumn = Column<"created_at", DataType::TEXT, Default<CurrentTimestamp{}>, ColumnNotNull<> >;
+    using UpdatedAtColumn = Column<"updated_at", DataType::TEXT, Default<CurrentTimestamp{}> >;
+
+    auto testTableDef = MakeTableDefinition<"test_time_combo">(
+        std::make_tuple(IdColumn{}, NameColumn, CreatedAtColumn{}, UpdatedAtColumn{})
+    );
+    Database<decltype(testTableDef)> db("test_database.db", testTableDef);
+    auto &testTable = db.GetTable<decltype(testTableDef)>();
+
+    // 插入資料，時間欄位使用預設值
+    testTable.Insert<IdColumn, decltype(NameColumn)>(1, "David");
+
+    auto results = testTable.Select(
+        testTable[IdColumn{}],
+        testTable[NameColumn],
+        testTable[CreatedAtColumn{}],
+        testTable[UpdatedAtColumn{}]
+    ).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 1);
+    EXPECT_EQ(std::get<0>(results[0]), 1);
+    EXPECT_EQ(std::get<1>(results[0]), "David");
+
+    // 驗證兩個時間戳都有值
+    auto createdAt = std::get<2>(results[0]);
+    auto updatedAt = std::get<3>(results[0]);
+    EXPECT_FALSE(createdAt.empty());
+    EXPECT_FALSE(updatedAt.empty());
+    EXPECT_TRUE(createdAt.find(':') != std::string::npos);
+    EXPECT_TRUE(updatedAt.find(':') != std::string::npos);
+}
+

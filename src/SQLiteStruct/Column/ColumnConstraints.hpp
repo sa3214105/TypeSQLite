@@ -1,4 +1,5 @@
 #pragma once
+#include "TimeKeyWord.hpp"
 #include "../Order.hpp"
 #include "../Column/ConflictCause.hpp"
 #include "../../TemplateHelper/FixedType.hpp"
@@ -47,6 +48,9 @@ namespace TypeSQLite {
             } else if constexpr (std::is_floating_point_v<ValueType>) {
                 // For floating point types
                 return FixedString("DEFAULT ") + toFixedString<DefaultValue.value>();
+            } else if constexpr (TimeKeyWordConcept<ValueType>) {
+                // For time keyword types
+                return FixedString("DEFAULT ") + ValueType::value;
             } else {
                 return FixedString("DEFAULT ") + toFixedString<DefaultValue.value>();
             }
