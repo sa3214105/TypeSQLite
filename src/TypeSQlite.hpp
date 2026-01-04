@@ -1,5 +1,6 @@
 #pragma once
 #include "SQLiteStruct/Query/SelectAble.hpp"
+#include "SQLiteStruct/Query/ForeignKey.hpp"
 #include "SQLiteStruct/Expressions/AggregateFunctions.hpp"
 #include "SQLiteStruct/Expressions/WindowFunctions.hpp"
 #include "SQLiteStruct/Expressions/MathFunctions.hpp"

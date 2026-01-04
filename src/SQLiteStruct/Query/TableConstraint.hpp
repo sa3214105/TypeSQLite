@@ -70,7 +70,17 @@ namespace TypeSQLite {
     };
 
     //TODO CHECK暫時不實作
-    //TODO FOREIGN KEY暫時不實作
+    template<typename LocalColumns, typename ForeignKeyClause>
+    struct TableForeignKey {
+        const std::string value;
+
+        explicit TableForeignKey(LocalColumns localColumns, ForeignKeyClause clause)
+            : value(std::string("FOREIGN KEY(") +
+                    std::apply([](auto... columns) { return GetColumnsNameWithOrder(columns...); }, localColumns) +
+                    std::string(") ") +
+                    clause.value) {
+        }
+    };
 
     // Table options (applied after table definition)
     struct WithoutRowId {
@@ -92,6 +102,10 @@ namespace TypeSQLite {
 
     template<typename Columns>
     struct IsTableConstraint<TableUnique<Columns> > : std::true_type {
+    };
+
+    template<typename LocalColumns, typename ForeignKeyClause>
+    struct IsTableConstraint<TableForeignKey<LocalColumns, ForeignKeyClause> > : std::true_type {
     };
 
     template<typename T>

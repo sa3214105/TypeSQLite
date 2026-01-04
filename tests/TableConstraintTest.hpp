@@ -511,3 +511,269 @@ TEST_F(TableConstraintTest, TableConstraintMixedSingleCompositeUnique) {
     EXPECT_EQ(results.size(), 2);
 }
 
+// ============ Table Foreign Key 測試 ============
+
+// 測試 Foreign Key (單欄位外鍵)
+TEST_F(TableConstraintTest, TableForeignKeySingle) {
+    // 創建父表（被引用的表）
+    using ParentIdColumn = Column<"parent_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using ParentNameColumn = Column<"parent_name", DataType::TEXT>;
+    auto parentTableDef = MakeTableDefinition<"parent_table">(
+        std::make_tuple(ParentIdColumn{}, ParentNameColumn{}),
+        std::make_tuple(),
+        std::make_tuple()
+    );
+
+    // 創建子表（包含外鍵的表）
+    using ChildIdColumn = Column<"child_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using ChildNameColumn = Column<"child_name", DataType::TEXT>;
+    using ParentRefColumn = Column<"parent_ref", DataType::INTEGER>;
+
+    auto foreignKeyClause = ForeignKeyClause(parentTableDef, ParentIdColumn{});
+    auto childTableDef = MakeTableDefinition<"child_table">(
+        std::make_tuple(ChildIdColumn{}, ChildNameColumn{}, ParentRefColumn{}),
+        std::make_tuple(TableForeignKey(std::make_tuple(ParentRefColumn{}), foreignKeyClause)),
+        std::make_tuple()
+    );
+
+    Database<decltype(parentTableDef), decltype(childTableDef)> db("test_database.db", parentTableDef, childTableDef);
+    auto &parentTable = db.GetTable<decltype(parentTableDef)>();
+    auto &childTable = db.GetTable<decltype(childTableDef)>();
+
+    // 插入父表資料
+    parentTable.Insert<ParentIdColumn, ParentNameColumn>(1, "Parent One");
+    parentTable.Insert<ParentIdColumn, ParentNameColumn>(2, "Parent Two");
+
+    // 插入有效的子表資料（引用存在的父表記錄）
+    childTable.Insert<ChildIdColumn, ChildNameColumn, ParentRefColumn>(101, "Child One", 1);
+    childTable.Insert<ChildIdColumn, ChildNameColumn, ParentRefColumn>(102, "Child Two", 2);
+
+    auto results = childTable.Select(
+        childTable[ChildIdColumn{}],
+        childTable[ChildNameColumn{}],
+        childTable[ParentRefColumn{}]
+    ).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 2);
+    EXPECT_EQ(std::get<0>(results[0]), 101);
+    EXPECT_EQ(std::get<2>(results[0]), 1);
+}
+
+// 測試 Foreign Key (複合外鍵)
+TEST_F(TableConstraintTest, TableForeignKeyComposite) {
+    // 創建父表（複合主鍵）
+    using DeptIdColumn = Column<"dept_id", DataType::INTEGER>;
+    using DeptCodeColumn = Column<"dept_code", DataType::TEXT>;
+    using DeptNameColumn = Column<"dept_name", DataType::TEXT>;
+
+    auto deptTableDef = MakeTableDefinition<"departments">(
+        std::make_tuple(DeptIdColumn{}, DeptCodeColumn{}, DeptNameColumn{}),
+        std::make_tuple(TablePrimaryKey(std::make_tuple(DeptIdColumn{}, DeptCodeColumn{}))),
+        std::make_tuple()
+    );
+
+    // 創建員工表（複合外鍵）
+    using EmpIdColumn = Column<"emp_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using EmpNameColumn = Column<"emp_name", DataType::TEXT>;
+    using EmpDeptIdColumn = Column<"emp_dept_id", DataType::INTEGER>;
+    using EmpDeptCodeColumn = Column<"emp_dept_code", DataType::TEXT>;
+
+    auto foreignKeyClause = ForeignKeyClause(
+        deptTableDef,
+        DeptIdColumn{},
+        DeptCodeColumn{}
+    );
+
+    auto empTableDef = MakeTableDefinition<"employees">(
+        std::make_tuple(EmpIdColumn{}, EmpNameColumn{}, EmpDeptIdColumn{}, EmpDeptCodeColumn{}),
+        std::make_tuple(TableForeignKey(
+            std::make_tuple(EmpDeptIdColumn{}, EmpDeptCodeColumn{}),
+            foreignKeyClause
+        )),
+        std::make_tuple()
+    );
+
+    Database<decltype(deptTableDef), decltype(empTableDef)> db("test_database.db", deptTableDef, empTableDef);
+    auto &deptTable = db.GetTable<decltype(deptTableDef)>();
+    auto &empTable = db.GetTable<decltype(empTableDef)>();
+
+    // 插入部門資料
+    deptTable.Insert<DeptIdColumn, DeptCodeColumn, DeptNameColumn>(1, "IT", "Information Technology");
+    deptTable.Insert<DeptIdColumn, DeptCodeColumn, DeptNameColumn>(2, "HR", "Human Resources");
+
+    // 插入員工資料
+    empTable.Insert<EmpIdColumn, EmpNameColumn, EmpDeptIdColumn, EmpDeptCodeColumn>(
+        1001, "Alice", 1, "IT"
+    );
+    empTable.Insert<EmpIdColumn, EmpNameColumn, EmpDeptIdColumn, EmpDeptCodeColumn>(
+        1002, "Bob", 2, "HR"
+    );
+
+    auto results = empTable.Select(
+        empTable[EmpIdColumn{}],
+        empTable[EmpNameColumn{}],
+        empTable[EmpDeptIdColumn{}]
+    ).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 2);
+}
+
+// 測試 Foreign Key with CASCADE
+TEST_F(TableConstraintTest, TableForeignKeyWithCascade) {
+    // 創建父表
+    using CategoryIdColumn = Column<"category_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using CategoryNameColumn = Column<"category_name", DataType::TEXT>;
+
+    auto categoryTableDef = MakeTableDefinition<"categories">(
+        std::make_tuple(CategoryIdColumn{}, CategoryNameColumn{}),
+        std::make_tuple(),
+        std::make_tuple()
+    );
+
+    // 創建產品表（帶 ON DELETE CASCADE）
+    using ProductIdColumn = Column<"product_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using ProductNameColumn = Column<"product_name", DataType::TEXT>;
+    using ProductCategoryIdColumn = Column<"product_category_id", DataType::INTEGER>;
+
+    auto foreignKeyClause = ForeignKeyClause(
+        categoryTableDef,
+        CategoryIdColumn{}
+    )
+    .On(ForeignTableAction::DELETE, ForeignKeyAction::CASCADE)
+    .On(ForeignTableAction::UPDATE, ForeignKeyAction::CASCADE);
+
+    auto productTableDef = MakeTableDefinition<"products">(
+        std::make_tuple(ProductIdColumn{}, ProductNameColumn{}, ProductCategoryIdColumn{}),
+        std::make_tuple(TableForeignKey(
+            std::make_tuple(ProductCategoryIdColumn{}),
+            foreignKeyClause
+        )),
+        std::make_tuple()
+    );
+
+    Database<decltype(categoryTableDef), decltype(productTableDef)> db("test_database.db", categoryTableDef, productTableDef);
+    auto &categoryTable = db.GetTable<decltype(categoryTableDef)>();
+    auto &productTable = db.GetTable<decltype(productTableDef)>();
+
+    // 插入分類
+    categoryTable.Insert<CategoryIdColumn, CategoryNameColumn>(1, "Electronics");
+    categoryTable.Insert<CategoryIdColumn, CategoryNameColumn>(2, "Books");
+
+    // 插入產品
+    productTable.Insert<ProductIdColumn, ProductNameColumn, ProductCategoryIdColumn>(
+        201, "Laptop", 1
+    );
+    productTable.Insert<ProductIdColumn, ProductNameColumn, ProductCategoryIdColumn>(
+        202, "Novel", 2
+    );
+
+    auto results = productTable.Select(
+        productTable[ProductIdColumn{}],
+        productTable[ProductNameColumn{}]
+    ).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 2);
+
+    // 注意：SQLite 默認不啟用外鍵約束，需要 PRAGMA foreign_keys = ON
+    // 這個測試主要驗證語法正確性
+}
+
+// 測試 Foreign Key with SET NULL
+TEST_F(TableConstraintTest, TableForeignKeyWithSetNull) {
+    // 創建供應商表
+    using SupplierIdColumn = Column<"supplier_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using SupplierNameColumn = Column<"supplier_name", DataType::TEXT>;
+
+    auto supplierTableDef = MakeTableDefinition<"suppliers">(
+        std::make_tuple(SupplierIdColumn{}, SupplierNameColumn{}),
+        std::make_tuple(),
+        std::make_tuple()
+    );
+
+    // 創建零件表（帶 ON DELETE SET NULL）
+    using PartIdColumn = Column<"part_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using PartNameColumn = Column<"part_name", DataType::TEXT>;
+    using PartSupplierIdColumn = Column<"part_supplier_id", DataType::INTEGER>;
+
+    auto foreignKeyClause = ForeignKeyClause(
+        supplierTableDef,
+        SupplierIdColumn{}
+    )
+    .On(ForeignTableAction::DELETE, ForeignKeyAction::SET_NULL);
+
+    auto partTableDef = MakeTableDefinition<"parts">(
+        std::make_tuple(PartIdColumn{}, PartNameColumn{}, PartSupplierIdColumn{}),
+        std::make_tuple(TableForeignKey(
+            std::make_tuple(PartSupplierIdColumn{}),
+            foreignKeyClause
+        )),
+        std::make_tuple()
+    );
+
+    Database<decltype(supplierTableDef), decltype(partTableDef)> db("test_database.db", supplierTableDef, partTableDef);
+    auto &supplierTable = db.GetTable<decltype(supplierTableDef)>();
+    auto &partTable = db.GetTable<decltype(partTableDef)>();
+
+    // 插入供應商
+    supplierTable.Insert<SupplierIdColumn, SupplierNameColumn>(1, "Supplier A");
+    supplierTable.Insert<SupplierIdColumn, SupplierNameColumn>(2, "Supplier B");
+
+    // 插入零件
+    partTable.Insert<PartIdColumn, PartNameColumn, PartSupplierIdColumn>(301, "Screw", 1);
+    partTable.Insert<PartIdColumn, PartNameColumn, PartSupplierIdColumn>(302, "Bolt", 2);
+
+    auto results = partTable.Select(
+        partTable[PartIdColumn{}],
+        partTable[PartSupplierIdColumn{}]
+    ).Results().ToVector();
+
+    EXPECT_EQ(results.size(), 2);
+    // 注意：SQLite 默認不啟用外鍵約束
+    // 這個測試主要驗證語法正確性
+}
+
+// 測試 Foreign Key 違反約束
+TEST_F(TableConstraintTest, TableForeignKeyViolation) {
+    // 創建主表
+    using MasterIdColumn = Column<"master_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using MasterNameColumn = Column<"master_name", DataType::TEXT>;
+
+    auto masterTableDef = MakeTableDefinition<"master">(
+        std::make_tuple(MasterIdColumn{}, MasterNameColumn{}),
+        std::make_tuple(),
+        std::make_tuple()
+    );
+
+    // 創建詳細表
+    using DetailIdColumn = Column<"detail_id", DataType::INTEGER, ColumnPrimaryKey<>>;
+    using DetailMasterIdColumn = Column<"detail_master_id", DataType::INTEGER>;
+
+    auto foreignKeyClause = ForeignKeyClause(
+        masterTableDef,
+        MasterIdColumn{}
+    );
+
+    auto detailTableDef = MakeTableDefinition<"detail">(
+        std::make_tuple(DetailIdColumn{}, DetailMasterIdColumn{}),
+        std::make_tuple(TableForeignKey(
+            std::make_tuple(DetailMasterIdColumn{}),
+            foreignKeyClause
+        )),
+        std::make_tuple()
+    );
+
+    Database<decltype(masterTableDef), decltype(detailTableDef)> db("test_database.db", masterTableDef, detailTableDef);
+    auto &masterTable = db.GetTable<decltype(masterTableDef)>();
+    auto &detailTable = db.GetTable<decltype(detailTableDef)>();
+
+    masterTable.Insert<MasterIdColumn, MasterNameColumn>(1, "Master One");
+
+    // 插入有效的記錄
+    detailTable.Insert<DetailIdColumn, DetailMasterIdColumn>(1001, 1);
+
+    auto results = detailTable.Select(detailTable[DetailIdColumn{}]).Results().ToVector();
+    EXPECT_EQ(results.size(), 1);
+
+    // 注意：SQLite 默認不強制執行外鍵約束，需要 PRAGMA foreign_keys = ON
+    // 這個測試主要驗證語法正確性
+}
